@@ -42,5 +42,5 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/dokploy:compute
-            ghcr.io/${{ github.repository_owner }}/dokploy:compute-${{ github.sha }}
+            ghcr.io/ramtinhoss/dokploy:compute
+            ghcr.io/ramtinhoss/dokploy:compute-${{ github.sha }}
