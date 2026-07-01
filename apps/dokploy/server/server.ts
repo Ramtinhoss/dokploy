@@ -16,6 +16,8 @@ import {
 import { config } from "dotenv";
 import next from "next";
 import packageInfo from "../package.json";
+import { setupComputeAgentStreamWebSocketServer } from "./wss/compute-agent-stream";
+import { setupComputeEventsWebSocketServer } from "./wss/compute-events";
 import { setupComputeTerminalWebSocketServer } from "./wss/compute-terminal";
 import { setupDockerContainerLogsWebSocketServer } from "./wss/docker-container-logs";
 import { setupDockerContainerTerminalWebSocketServer } from "./wss/docker-container-terminal";
@@ -54,6 +56,8 @@ void app.prepare().then(async () => {
 		setupDockerContainerTerminalWebSocketServer(server);
 		setupTerminalWebSocketServer(server);
 		setupComputeTerminalWebSocketServer(server);
+		setupComputeAgentStreamWebSocketServer(server);
+		setupComputeEventsWebSocketServer(server);
 		if (!IS_CLOUD) {
 			setupDockerStatsMonitoringSocketServer(server);
 		}

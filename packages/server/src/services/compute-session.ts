@@ -208,9 +208,6 @@ export const execInComputeSession = async (
 export const getComputeSessionMetrics = async (sessionId: string) =>
 	callRouter("GET", `/sessions/${sessionId}/metrics`);
 
-export const findAgentRunsBySessionId = async (sessionId: string) =>
-	db.query.agentRuns.findMany({ where: eq(agentRuns.sessionId, sessionId) });
-
 export const findAgentRunById = async (agentRunId: string) => {
 	const r = await db.query.agentRuns.findFirst({
 		where: eq(agentRuns.agentRunId, agentRunId),
@@ -219,9 +216,51 @@ export const findAgentRunById = async (agentRunId: string) => {
 	return r;
 };
 
-// Persist the run row (status running), run it via the router, then record the result.
-// The router builds the argv with the dangerous-flags guard, so bypass flags can never
-// reach a non-sandbox backend.
+// Finalize a still-running row from the router (best-effort). The router runs the agent
+// async and streams; this pulls the current state and, once finished, records the final
+// status/output/exit/artifacts. Returns the (possibly updated) row.
+export const reconcileAgentRun = async (agentRunId: string) => {
+	const row = await findAgentRunById(agentRunId);
+	if (row.status !== "running" || !row.routerRunId) return row;
+	try {
+		const r = (await callRouter("GET", `/agent-runs/${row.routerRunId}`)) as any;
+		const set =
+			r.finished_at == null
+				? { output: r.output ?? row.output } // still running -> refresh live output
+				: {
+						status: r.status,
+						exitCode: r.exit_code ?? null,
+						output: r.output ?? null,
+						command: r.command ?? null,
+						artifacts: r.artifacts ?? null,
+						finishedAt: new Date().toISOString(),
+					};
+		return db
+			.update(agentRuns)
+			.set(set)
+			.where(eq(agentRuns.agentRunId, agentRunId))
+			.returning()
+			.then((x) => x[0]);
+	} catch {
+		return row; // router unreachable -> leave as-is
+	}
+};
+
+export const findAgentRunsBySessionId = async (sessionId: string) => {
+	const rows = await db.query.agentRuns.findMany({
+		where: eq(agentRuns.sessionId, sessionId),
+	});
+	return Promise.all(
+		rows.map((r) =>
+			r.status === "running" && r.routerRunId ? reconcileAgentRun(r.agentRunId) : r,
+		),
+	);
+};
+
+// Persist the run row (running), start it on the router with stream:true (async), and
+// store the router's run id so the Agent runs tab can tail it live over a websocket and
+// reconcileAgentRun can finalize it. The router builds the argv with the dangerous-flags
+// guard, so bypass flags can never reach a non-sandbox backend.
 export const launchComputeAgent = async (input: {
 	sessionId: string;
 	agentType: "claude" | "codex";
@@ -243,17 +282,15 @@ export const launchComputeAgent = async (input: {
 	const result = (await callRouter("POST", `/sessions/${input.sessionId}/agent`, {
 		agentType: input.agentType,
 		task: input.task,
+		stream: true,
 	})) as any;
 
 	return db
 		.update(agentRuns)
 		.set({
-			status: result.status,
-			exitCode: result.exit_code ?? null,
-			output: result.output ?? null,
+			routerRunId: result.run_id ?? null,
+			status: result.status ?? "running",
 			command: result.command ?? null,
-			artifacts: result.artifacts ?? null,
-			finishedAt: new Date().toISOString(),
 		})
 		.where(eq(agentRuns.agentRunId, row.agentRunId))
 		.returning()

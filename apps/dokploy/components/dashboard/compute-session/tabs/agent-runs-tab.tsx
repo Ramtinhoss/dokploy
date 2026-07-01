@@ -11,7 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/utils/api";
 import { Bot, FileText, Loader2, Play } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AibuildaiRunForm } from "../aibuildai-run-form";
 
@@ -22,8 +22,8 @@ const STATUS_VARIANT: Record<string, string> = {
 };
 
 // Agent runs: launch headless Claude Code / Codex (persisted as agent_run rows) or an
-// AIBuildAI run. The router builds the argv with the dangerous-flags guard. Past runs
-// list below with status, output, and (for AIBuildAI) links to progress.pdf / submit.py.
+// AIBuildAI run. The router runs the agent async and streams output; the launched run
+// is tailed live over /compute-agent-stream. Past runs list below with status + artifacts.
 export const AgentRunsTab = ({
 	sessionId,
 	environmentId,
@@ -33,19 +33,42 @@ export const AgentRunsTab = ({
 }) => {
 	const [tool, setTool] = useState<"claude" | "codex">("claude");
 	const [task, setTask] = useState("");
+	const [liveRunId, setLiveRunId] = useState<string | null>(null);
+	const [liveOutput, setLiveOutput] = useState("");
+	const outputRef = useRef<HTMLPreElement>(null);
 	const utils = api.useUtils();
+
 	const { data: runs } = api.computeSession.agentRuns.useQuery(
 		{ sessionId },
 		{ refetchInterval: 4000 },
 	);
 	const launch = api.computeSession.launchAgent.useMutation({
-		onSuccess: async () => {
+		onSuccess: (row: any) => {
 			toast.success("Agent run started");
 			setTask("");
-			await utils.computeSession.agentRuns.invalidate({ sessionId });
+			setLiveOutput("");
+			setLiveRunId(row.agentRunId);
 		},
 		onError: (e) => toast.error(e.message),
 	});
+
+	// Tail the live run over the browser websocket -> /compute-agent-stream proxy.
+	useEffect(() => {
+		if (!liveRunId) return;
+		const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+		const ws = new WebSocket(
+			`${proto}//${window.location.host}/compute-agent-stream?agentRunId=${liveRunId}`,
+		);
+		ws.onmessage = (ev) => {
+			setLiveOutput((o) => `${o}${ev.data}\n`);
+			outputRef.current?.scrollTo(0, outputRef.current.scrollHeight);
+		};
+		ws.onclose = () => {
+			void utils.computeSession.agentRuns.invalidate({ sessionId });
+			setLiveRunId(null);
+		};
+		return () => ws.readyState === WebSocket.OPEN && ws.close();
+	}, [liveRunId, sessionId, utils]);
 
 	return (
 		<div className="flex flex-col gap-6">
@@ -80,6 +103,19 @@ export const AgentRunsTab = ({
 					)}
 					Run headless
 				</Button>
+				{liveRunId && (
+					<div className="flex flex-col gap-1">
+						<span className="flex items-center gap-1.5 text-xs text-amber-600">
+							<Loader2 className="size-3 animate-spin" /> live output
+						</span>
+						<pre
+							ref={outputRef}
+							className="max-h-56 overflow-auto rounded-md bg-black/90 p-2 text-xs text-emerald-300"
+						>
+							{liveOutput || "…"}
+						</pre>
+					</div>
+				)}
 			</div>
 
 			{runs && runs.length > 0 && (

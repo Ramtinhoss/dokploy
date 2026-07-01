@@ -22,6 +22,7 @@ export const agentRuns = pgTable("agent_run", {
 	sessionId: text("sessionId")
 		.notNull()
 		.references(() => computeSessions.sessionId, { onDelete: "cascade" }),
+	routerRunId: text("routerRunId"), // the compute-router's run id (for stream + reconcile)
 	agentType: agentType("agentType").notNull(),
 	status: agentRunStatus("status").notNull().default("running"),
 	command: jsonb("command").$type<string[]>(),

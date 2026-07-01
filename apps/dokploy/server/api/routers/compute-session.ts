@@ -8,6 +8,7 @@ import {
 	getComputeSessionMetrics,
 	launchAibuildaiRun,
 	launchComputeAgent,
+	reconcileAgentRun,
 	startComputeNotebook,
 	teardownComputeSession,
 } from "@dokploy/server";
@@ -142,7 +143,7 @@ export const computeSessionRouter = createTRPCRouter({
 			const run = await findAgentRunById(input.agentRunId);
 			const s = await findComputeSessionById(run.sessionId);
 			await requireEnvMember(ctx, s.environmentId);
-			return run;
+			return reconcileAgentRun(input.agentRunId);
 		}),
 
 	// AIBuildAI run form -> a gpu-batch session on Modal + the aibuildai CLI. GPU-gated.
