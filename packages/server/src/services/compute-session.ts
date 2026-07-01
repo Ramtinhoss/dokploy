@@ -138,6 +138,9 @@ export const createComputeSession = async (
 		voucher,
 		request: {
 			request_id: input.requestId,
+			// Key the router session by OUR sessionId so every later per-session call
+			// (terminal/notebook/exec/metrics/teardown, all addressed by sessionId) resolves.
+			session_id: row.sessionId,
 			project_id: "",
 			researcher_id: input.researcherId,
 			workload_type: input.workloadType,
