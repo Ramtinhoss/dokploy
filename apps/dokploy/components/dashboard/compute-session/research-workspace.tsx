@@ -1,11 +1,18 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/utils/api";
 import { Activity, Bot, BookOpen, TerminalSquare } from "lucide-react";
+import dynamic from "next/dynamic";
 import { ComputeSessionCard } from "./compute-session-card";
 import { AgentRunsTab } from "./tabs/agent-runs-tab";
 import { MonitoringTab } from "./tabs/monitoring-tab";
 import { NotebookTab } from "./tabs/notebook-tab";
-import { TerminalTab } from "./tabs/terminal-tab";
+
+// xterm.js touches browser globals (`self`) at import time, which breaks Next's build-time
+// page-data collection (SSR). Load the terminal tab client-only.
+const TerminalTab = dynamic(
+	() => import("./tabs/terminal-tab").then((m) => m.TerminalTab),
+	{ ssr: false },
+);
 
 // The Research Workspace: one place per Compute Session to get a terminal + notebook on a
 // persistent remote workspace, launch AI agents, and watch cost/metrics — with the session

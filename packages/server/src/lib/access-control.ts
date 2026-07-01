@@ -83,6 +83,7 @@ export const ac = createAccessControl(statements);
  * Owner role — full access to everything
  */
 export const ownerRole = ac.newRole({
+	computeSession: ["create", "read", "delete", "gpu"],
 	organization: ["update", "delete"],
 	member: ["read", "create", "update", "delete"],
 	invitation: ["create", "cancel"],
@@ -120,6 +121,7 @@ export const ownerRole = ac.newRole({
  * Admin role — same as owner but cannot delete the organization
  */
 export const adminRole = ac.newRole({
+	computeSession: ["create", "read", "delete", "gpu"],
 	organization: ["update"],
 	member: ["read", "create", "update", "delete"],
 	invitation: ["create", "cancel"],
@@ -160,6 +162,7 @@ export const adminRole = ac.newRole({
  * Enterprise resources are not available to the base member role.
  */
 export const memberRole = ac.newRole({
+	computeSession: ["create", "read"],
 	organization: [],
 	member: [],
 	invitation: [],
