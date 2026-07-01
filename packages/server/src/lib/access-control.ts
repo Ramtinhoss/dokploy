@@ -48,6 +48,7 @@ export const statements = {
 	logs: ["read"],
 	monitoring: ["read"],
 	auditLog: ["read"],
+	computeSession: ["create", "read", "delete", "gpu"],
 } as const;
 
 /**

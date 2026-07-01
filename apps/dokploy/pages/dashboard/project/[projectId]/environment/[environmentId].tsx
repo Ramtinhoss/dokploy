@@ -31,6 +31,7 @@ import superjson from "superjson";
 import { AddAiAssistant } from "@/components/dashboard/project/add-ai-assistant";
 import { AddApplication } from "@/components/dashboard/project/add-application";
 import { AddCompose } from "@/components/dashboard/project/add-compose";
+import { AddComputeSession } from "@/components/dashboard/project/add-compute-session";
 import { AddDatabase } from "@/components/dashboard/project/add-database";
 import { AddImport } from "@/components/dashboard/project/add-import";
 import { AddTemplate } from "@/components/dashboard/project/add-template";
@@ -1087,6 +1088,7 @@ const EnvironmentPage = (
 													projectName={projectData?.name}
 													environmentId={environmentId}
 												/>
+												<AddComputeSession environmentId={environmentId} />
 												<AddTemplate environmentId={environmentId} />
 												<AddAiAssistant
 													projectName={projectData?.name}

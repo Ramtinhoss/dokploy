@@ -11,12 +11,20 @@ import {
 } from "./queue.js";
 import { jobQueueSchema } from "./schema.js";
 import { initializeJobs } from "./utils.js";
+import {
+	registerComputeHeartbeat,
+	startComputeHeartbeatWorker,
+} from "./compute-heartbeat.js";
 import { firstWorker, secondWorker, thirdWorker } from "./workers.js";
 
 const app = new Hono();
 
 cleanQueue();
 initializeJobs();
+
+// compute-session budget/TTL reaper (60s + a 20s GPU trimmer) -> compute-router /sessions/reap
+void registerComputeHeartbeat();
+const computeWorker = startComputeHeartbeatWorker();
 
 app.use(async (c, next) => {
 	if (c.req.path === "/health") {
@@ -92,6 +100,7 @@ export const gracefulShutdown = async (signal: string) => {
 	await firstWorker.close();
 	await secondWorker.close();
 	await thirdWorker.close();
+	await computeWorker.close();
 	process.exit(0);
 };
 

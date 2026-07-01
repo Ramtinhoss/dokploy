@@ -135,6 +135,7 @@ export const member = pgTable("member", {
 	canCreateProjects: boolean("canCreateProjects").notNull().default(false),
 	canAccessToSSHKeys: boolean("canAccessToSSHKeys").notNull().default(false),
 	canCreateServices: boolean("canCreateServices").notNull().default(false),
+	canRequestGpu: boolean("canRequestGpu").notNull().default(false),
 	canDeleteProjects: boolean("canDeleteProjects").notNull().default(false),
 	canDeleteServices: boolean("canDeleteServices").notNull().default(false),
 	canAccessToDocker: boolean("canAccessToDocker").notNull().default(false),
